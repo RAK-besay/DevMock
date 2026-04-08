@@ -1,19 +1,30 @@
 import React from 'react'
-import {FormControl, FormDescription, FormItem, FormLabel, FormMessage} from "@/components/ui/form";
+import {
+    FormControl,
+    FormField as ShadcnFormField,
+    FormItem,
+    FormLabel,
+    FormMessage
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {Controller, FieldValues, Path, Control} from "react-hook-form";
+import { FieldValues, Path, Control } from "react-hook-form";
 
-interface FormFieldProps<T extends FieldValues>{
+interface FormFieldProps<T extends FieldValues> {
     control: Control<T>;
-    name:Path<T>;
+    name: Path<T>;
     label: string;
     placeholder?: string;
-    type?: 'text' | 'email' | 'password'| 'file'
+    type?: 'text' | 'email' | 'password' | 'file'
 }
 
-const FormField = ({ control, name, label, placeholder, type
-="text"}: FormFieldProps<T>) => (
-    <Controller
+const FormField = <T extends FieldValues>({
+                                              control,
+                                              name,
+                                              label,
+                                              placeholder,
+                                              type = "text"
+                                          }: FormFieldProps<T>) => (
+    <ShadcnFormField //
         control={control}
         name={name}
         render={({ field }) => (
@@ -24,11 +35,13 @@ const FormField = ({ control, name, label, placeholder, type
                         className="input"
                         placeholder={placeholder}
                         type={type}
-                        {... field} />
+                        {...field}
+                    />
                 </FormControl>
-                <FormMessage/>
+                <FormMessage />
             </FormItem>
         )}
     />
 );
-export default FormField
+
+export default FormField;
