@@ -38,12 +38,47 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 
 
-3:30
-const interview ={
-role, type, level,
-techstack: techstack.split(','),
-questions: JSON.parse(questions),
-userId: userid,
-finalized: true,
-coverImage: getRandomInterviewCover(),
-createdAt: new Date().toISOString()
+export async function updateUserProfile(params: { name?: string; password?: string }) {
+try {
+const currentUser = await getCurrentUser();
+
+        if (!currentUser) {
+            return { success: false, message: "You must be logged in to update your profile." };
+        }
+
+        let isUpdated = false;
+
+        // 1. Update the name in Firestore if it was changed
+        if (params.name && params.name !== currentUser.name) {
+            await db.collection('users').doc(currentUser.id).update({
+                name: params.name
+            });
+            isUpdated = true;
+        }
+
+        // 2. Update the password in Firebase Auth if a new one was typed
+        if (params.password && params.password.length >= 6) {
+            await auth.updateUser(currentUser.id, {
+                password: params.password
+            });
+            isUpdated = true;
+        }
+
+        if (isUpdated) {
+            // *** THE MAGIC FIX *** // This destroys the cached pages and forces Next.js to pull the fresh Firebase data!
+            revalidatePath('/');
+            revalidatePath('/profile');
+
+            return { success: true, message: "Profile updated successfully!" };
+        } else {
+            return { success: true, message: "No changes were made." };
+        }
+
+    } catch (error: any) {
+        console.error("Error updating profile:", error);
+        return {
+            success: false,
+            message: error.message || "Failed to update profile. Please try again."
+        };
+    }
+}

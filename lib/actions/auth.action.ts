@@ -3,6 +3,7 @@
 
 import {auth, db} from "@/firebase/admin";
 import {cookies} from "next/headers";
+import { revalidatePath } from "next/cache";
 
 const ONE_WEEK =60 * 60 * 24 * 7 ;
 
@@ -118,3 +119,68 @@ export async function isAuthenticated() {
     return !!user;
 }
 
+export async function logOutUser() {
+    try {
+        // 1. You MUST await cookies() in Next.js 15!
+        const cookieStore = await cookies();
+
+        // 2. Delete the session cookie
+        cookieStore.delete("session");
+
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to log out", error);
+        return { success: false };
+    }
+}
+
+export async function updateUserProfile(params: { name?: string; password?: string; imageUrl?: string }) {
+    try {
+        const currentUser = await getCurrentUser();
+
+        if (!currentUser) {
+            return { success: false, message: "You must be logged in to update your profile." };
+        }
+
+        let isUpdated = false;
+
+        // 1. Update the name
+        if (params.name && params.name !== currentUser.name) {
+            await db.collection('users').doc(currentUser.id).update({
+                name: params.name
+            });
+            isUpdated = true;
+        }
+
+        // 2. Update the password
+        if (params.password && params.password.length >= 6) {
+            await auth.updateUser(currentUser.id, {
+                password: params.password
+            });
+            isUpdated = true;
+        }
+
+        // 3. NEW: Update the Image URL
+        if (params.imageUrl) {
+            await db.collection('users').doc(currentUser.id).update({
+                imageUrl: params.imageUrl
+            });
+            isUpdated = true;
+        }
+
+        if (isUpdated) {
+            revalidatePath('/');
+            revalidatePath('/profile');
+            return { success: true, message: "Profile updated successfully!" };
+        } else {
+            return { success: true, message: "No changes were made." };
+        }
+
+    } catch (error: any) {
+        console.error("Error updating profile:", error);
+        return {
+            success: false,
+            message: error.message || "Failed to update profile. Please try again."
+        };
+    }
+}
